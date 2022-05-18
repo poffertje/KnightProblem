@@ -1,99 +1,182 @@
-from soupsieve import select
+from random import randint
+from itertools import product
 from module2 import *
 
+GENE_SIZE = 195
 
-def init(pop_size, gen_num, cross_prob, mut_prob):
-    x_gen = generate_init_pop(pop_size)  # generation 0
-    # Evaluate the initial generation
-    f_gen = evaluate(x_gen)
+num_gen = 51
+pop_size = 100
+cross_prob = 0.1
+mut_prob = 0.1
 
-    # Do the following for n generations
-    for gen in range(gen_num):
-        # Create a new population (i.e., loop until the population size is full)
-        x_next_gen = np.empty((0,))
-        while len(x_next_gen) < pop_size:
-            x_par = select_parents(x_gen, f_gen)
-            x_new_par = crossover(x_par, cross_prob)
-            # There are multiple new individuals, but mutation only takes one
-            x_child = mutation(x_new_par, mut_prob)
-            x_next_gen = select_children(x_gen, x_child)
-            f_next_gen = evaluate(x_next_gen)
-            # We need to yield the best fitness here
-        x_gen = x_next_gen
-        f_gen = f_next_gen
 
-    
+# This is the main loop of the evolutionary algorithm
+def main(pop_size, gen_num, cross_prob, mut_prob):
+    # initialize the population
+    x_gen = generatePopulation(pop_size)  # create generation 0
+    f_gen = evaluate(x_gen)  # get the fitness value of generation 0
+
+    ea = EA(pop_size, cross_prob, mut_prob)
+
+    for i in range(num_gen):
+        # We need to yield the best fitness here
+        yield 'generation: {}, best value: {:}'.format(i, max(f_gen))
+
+        x_gen, f_gen = ea.step(x_gen, f_gen)
+
+
+# This function creates the initial population
 # Takes population size as input and return an initial population
-def generate_init_pop(pop_size):
-    # Initialize an array for the population
-    population = np.empty((0, 195), dtype=int)
+def generatePopulation(pop_size):
+    # type: (int) -> list[str]
+    generation = []  # initialize return variable
     for i in range(pop_size):
-        # Choose the starting position (between 0 and 63, 6 bits)
-        individual = np.random.randint(2, size=6)
-        # Generate 63 random transitions
-        while len(individual) < 195:
-            # All transition possibilities are 0-7, 3 bits
-            transition = np.random.randint(2, size=3)
-            individual = np.concatenate((individual, transition))
-        # Add the new individual to the population
-        population = np.concatenate((population, [individual]))
-    # return array of arrays of 195 bits
-    return population
+        # create a single gene
+        gene = ''
+        for i in range(GENE_SIZE):
+            # update single gene
+            gene = gene + str(randint(0, 1))
+        # check for errors before adding the gene to the gene pool
+        assert len(gene) == GENE_SIZE
+        generation.append(gene)
 
-# This is not the most effective way, but works for now
-# Takes a generation as input and returns the fitnesses of the individuals
-# of that population
+    return generation
+
+
+# Takes a generation as input and returns a list of the fitnesses of the 
+# individuals of that population
 def evaluate(x_gen):
-    # Initialize an empty array for the fitnesses
-    x_fitness = np.empty((0,))
-    for individual in x_gen:
-        # Calculate the fitness of that individual
-        fitness_individual = 0
-        # Keep a list of visited squares (The start square is visited, 
-        # integers not binary numbers)
-        visited = np.array([int(''.join(individual[:6].astype(str)), 2)])
-        # For every transition, check whether it is on board & not visited
-        for i in range(6, 195, 3):
-            # Get the next square & whether it is a legal move
-            next_square, legal = legal_move(visited, individual[i:(i+3)])
-            # If yes, increment the fitness value
-            if legal:
-                fitness_individual += 1
-            # Add the current square to the visited
-            visited = np.concatenate((visited, [next_square]))
-        # Add the fitness of the individual to the array
-        x_fitness = np.concatenate((x_fitness, [fitness_individual]))
+    # type: (list[str]) -> list[int]
 
-    return x_fitness # return array of fitness values
+    f_gen = []
 
-# This function takes as an input the visited squares and the current 
-# transition and returns whether the transition is legal (i.e., on board & 
-# not visited before)
-def legal_move(visited, transition):
-    # Translate the transition into number 0 to 7 (they are encoded, so that
-    # 0 is up and left, and the rest are in clockwise order)
-    if np.all(transition == [0, 0, 0]):
-        new_square = visited[-1] - 2*8 - 1
-    elif np.all(transition == [0, 0, 1]):
-        new_square = visited[-1] - 2*8 + 1
-    elif np.all(transition == [0, 1, 0]):
-        new_square = visited[-1] - 8 + 2
-    elif np.all(transition == [0, 1, 1]):
-        new_square = visited[-1] + 8 + 2
-    elif np.all(transition == [1, 0, 0]):
-        new_square = visited[-1] + 2*8 + 1
-    elif np.all(transition == [1, 0, 1]):
-        new_square = visited[-1] + 2*8 - 1
-    elif np.all(transition == [1, 1, 0]):
-        new_square = visited[-1] + 8 - 2
-    elif np.all(transition == [1, 1, 1]):
-        new_square = visited[-1] - 8 - 2
-    
-    if np.where(visited != new_square):
-        # Check whether the new square is on board
-        if new_square < 64 and -1 < new_square:
-            return new_square, True
-        else:
-            return new_square, False
-    return new_square, False
+    for gene in x_gen:
+        board = Board()
+        f_gen.append(board.evaluateGene(gene))
+
+    return f_gen
+
+
+class Board:
+    def __init__(self):
+        self.x_axis = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        self.y_axis = [1, 2, 3, 4, 5, 6, 7, 8]
+
+        self.cells = [(x, y) for x in self.x_axis
+                      for y in self.y_axis]  # get all cells of the chess board
+
+        self.positions = [x for x in range(0, 64)]  # iteration list
+
+        self.cells_and_pos = zip(self.positions,
+                                 sorted(self.cells, key=lambda x: x[1]))
+
+        self.current_pos = None  # saves the current position of the piece
+        self.visited_cells = []  # saves visited cells
+
+    # Return all legal moves for the knight figure based on current position
+    def getKnightMoves(self, position):
+        # type: (tuple(str, int)) -> list[tuple(str, int)]
+        x, y = position
+
+        # create all posible moves for knight travel trajectory
+        moves = list(product([chr(ord(x) - 1), chr(ord(x) + 1)],
+                             [y - 2, y + 2])) + \
+                list(product([chr(ord(x) - 2), chr(ord(x) + 2)],
+                             [y - 1, y + 1]))
+
+        # out of bounds check
+        moves = [(x, y) for (x, y) in moves if (x, y) in self.cells]
+
+        return moves
+
+    # Binary code to cell on board converter
+    def translateBinaryToCell(self, binary):
+        # type: (str) -> tuple(str, int)
+
+        # convert binary to decimal
+        decimal = 0
+        for digit in binary:
+            decimal = decimal * 2 + int(digit)
+
+        # match the resulting integer with location on chess board
+        ret = [cell for pos, cell in self.cells_and_pos if decimal == pos]
+
+        return ret[0]
+
+    # Splits the gene into a list of moves
+    def splitGene(self, gene):
+        # type: (str) -> list[str]
+
+        splitted_gene = []  # initialize return value
+        splitted_gene.append(gene[0:6])  # append the starting position
+
+        # slice the gene without starting position
+        gene_without_start = gene[6:-1]
+
+        moves = [gene_without_start[i:i + 3]
+                 for i in range(0, len(gene_without_start), 3)]
+
+        splitted_gene.extend(moves)
+
+        return splitted_gene
+
+    # Make a move from the current position and returns new location
+    def updatePosition(self, curr_pos, move):
+        # type: (tuple(str, int), tuple(str, int)) -> tuple(str, int)
+
+        if move == '000':
+            location = (chr(ord(curr_pos[0]) + 1), curr_pos[1] - 2)
+
+        elif move == '001':
+            location = (chr(ord(curr_pos[0]) + 2), curr_pos[1] - 1)
+
+        elif move == '010':
+            location = (chr(ord(curr_pos[0]) + 2), curr_pos[1] + 1)
+
+        elif move == '011':
+            location = (chr(ord(curr_pos[0]) + 1), curr_pos[1] + 2)
+
+        elif move == '100':
+            location = (chr(ord(curr_pos[0]) - 1), curr_pos[1] + 2)
+
+        elif move == '101':
+            location = (chr(ord(curr_pos[0]) - 2), curr_pos[1] + 1)
+
+        elif move == '110':
+            location = (chr(ord(curr_pos[0]) - 2), curr_pos[1] - 1)
+
+        elif move == '111':
+            location = (chr(ord(curr_pos[0]) - 1), curr_pos[1] - 2)
+
+        return location
+
+    # Returns fitness value
+    def evaluateGene(self, gene):
+        # type: (str) -> int
+
+        # check for errors before adding the gene to the gene pool
+        assert len(gene) == GENE_SIZE
+
+        fitness_value = 0
+
+        # split the gene and get initial location of the piece
+        splitted_gene = self.splitGene(gene)
+        self.current_pos = self.translateBinaryToCell(splitted_gene[0])
+        self.visited_cells.append(self.current_pos)
+
+        # iterate through the moves and update fitness value
+        for move in splitted_gene[1:-1]:
+            valid_moves = self.getKnightMoves(self.current_pos)
+            location = self.updatePosition(self.current_pos, move)
+
+            if location in valid_moves and location not in self.visited_cells:
+                fitness_value += 1
+
+            self.current_pos = location
+            self.visited_cells.append(location)
+
+        return fitness_value
+
+
+main(pop_size, num_gen, cross_prob, mut_prob)
 
