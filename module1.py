@@ -4,10 +4,10 @@ from module2 import EA
 
 GENE_SIZE = 195
 
-num_gen = 51
-pop_size = 100
-cross_prob = 0.1
-mut_prob = 0.1
+num_gen = 400
+pop_size = 1000
+cross_prob = 0.8
+mut_prob = 0.8
 
 
 def main(pop_size, num_gen, cross_prob, mut_prob):
@@ -18,10 +18,13 @@ def main(pop_size, num_gen, cross_prob, mut_prob):
     ea = EA(pop_size, cross_prob, mut_prob)
 
     for i in range(num_gen):
-        if i % int(num_gen * 0.1) == 0:
-            print('generation: {}, best value: {:}'.format(i, max(f_gen)))
+        # yield the concatenated results string
+        yield print('generation: {}, best value: {:}'.format(i, max(f_gen)))
 
-        x_gen, f_fen = ea.step(x_gen, f_gen)
+        # take a step with the genetic algorithm
+        x_gen = ea.step(x_gen, f_gen)
+        # evaluae the new generation
+        f_gen = evaluate(x_gen)
 
 
 # This function creates the initial population
@@ -176,4 +179,5 @@ class Board:
         return fitness_value
 
 
-main(pop_size, num_gen, cross_prob, mut_prob)
+result = main(pop_size, num_gen, cross_prob, mut_prob)
+print(result)
