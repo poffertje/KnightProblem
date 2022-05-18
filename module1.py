@@ -1,6 +1,6 @@
 from random import randint
 from itertools import product
-from module2 import EA
+from module2 import *
 
 GENE_SIZE = 195
 
@@ -10,7 +10,8 @@ cross_prob = 0.8
 mut_prob = 0.8
 
 
-def main(pop_size, num_gen, cross_prob, mut_prob):
+# This is the main loop of the evolutionary algorithm
+def main(pop_size, gen_num, cross_prob, mut_prob):
     # initialize the population
     x_gen = generatePopulation(pop_size)  # create generation 0
     f_gen = evaluate(x_gen)  # get the fitness value of generation 0
@@ -28,9 +29,9 @@ def main(pop_size, num_gen, cross_prob, mut_prob):
 
 
 # This function creates the initial population
+# Takes population size as input and return an initial population
 def generatePopulation(pop_size):
     # type: (int) -> list[str]
-
     generation = []  # initialize return variable
     for i in range(pop_size):
         # create a single gene
@@ -45,7 +46,8 @@ def generatePopulation(pop_size):
     return generation
 
 
-# Return a list of fitness values for the generation
+# Takes a generation as input and returns a list of the fitnesses of the 
+# individuals of that population
 def evaluate(x_gen):
     # type: (list[str]) -> list[int]
 
@@ -181,3 +183,4 @@ class Board:
 
 result = main(pop_size, num_gen, cross_prob, mut_prob)
 print(result)
+
