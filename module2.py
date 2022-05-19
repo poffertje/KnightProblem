@@ -2,7 +2,7 @@ from random import randint
 import numpy as np
 
 GENE_SIZE = 195
-NUM_PARENTS = 2
+NUM_PARENTS = 80 # creates twice the number of children
 
 
 class EA(object):
@@ -12,19 +12,30 @@ class EA(object):
         self.mutation_p = mut_prob
 
     # probabilistically picks two individuals from a population,
-    # weighted by their fitness
+    # weighted by their fitness: Roulette Selection
     def parent_selection(self, x_old, f_old):
         # type: (list[str], list(int)) -> list[str]
 
         x_parents = []  # intialize return array
         f_sum = sum(f_old)  # sum of f_values
 
-        # create probabilities based on the fitness value proportion
-        random_p = [f_value/f_sum for f_value in f_old]
-        # select new individuals based on their fitness
-        x_parents = np.random.choice(x_old, NUM_PARENTS, False, random_p)
+        for i in range(NUM_PARENTS):
+            # create a random point P between 0 and f_sum
+            point_P = randint(0, f_sum)
+             # keep adding fitness values to point_P until point_P exceeds f_sum
+            for count, (f_gene, x_gene) in enumerate(zip(f_old, x_old)):
+                point_P += f_gene
+                # make an individual that exceeds f_sum new parent
+                if point_P >= f_sum:
+                    x_parents.append(x_gene)
+                    break  # start the next spin
 
-        return x_parents.tolist()
+                # if we have not exceeded the sum, then pick the last element
+                elif point_P < f_sum and count == (GENE_SIZE - 1):
+                    x_parents.append(x_gene)
+                    break  # start the next spin
+
+        return x_parents
 
     # Apply random one-point crossover to get new individuals
     def recombination(self, x_parents):
@@ -32,10 +43,10 @@ class EA(object):
 
         x_children = []  # initialize return variable
 
-        for idx in range(len(x_parents) - 1):
+        for idx in range(len(x_parents)):
             # select 2 genomes to become parents for crossover
-            parent1, parent2 = x_parents[idx], x_parents[idx + 1]
-            # turn the parents into lists
+            parent1, parent2 = x_parents[idx], x_parents[- 1 - idx]
+            # typecast the parents into lists
             par1, par2 = list(parent1), list(parent2)
 
             # pick a random value from uniform distribution between 0 and 1
@@ -49,7 +60,7 @@ class EA(object):
 
                 for i in range(recombination_point, GENE_SIZE):
                     # create children
-                    par1[i], par2[i] = par1[i], par2[i]
+                    par1[i], par2[i] = par2[i], par1[i]
 
                 child1 = ''.join(par1)
                 child2 = ''.join(par2)
@@ -65,7 +76,7 @@ class EA(object):
         return x_children
 
     # The mutation method takes the mutation probability and an individual as
-    # input and returns possibly mutated individual
+    # input and returns possibly mutated individual: Bit flipping
     def mutation(self, x_children):
         # type: (list[str]) -> list[str]
 
@@ -75,7 +86,7 @@ class EA(object):
 
             # pick a random value from uniform distribution between 0 and 1
             random_p = np.random.uniform(0, 1)
-
+            # typecast to list
             ret_child = list(child)
 
             # If the value is less than the mutation probability,
@@ -97,8 +108,13 @@ class EA(object):
 
     # the children selection method takes a population and an individual
     # as input and returns their union
-    def survivor_selection(self, x_children, x_new_children):
-        x_survivours = [*x_new_children, *x_children]
+    def survivor_selection(self, x_old, f_old, x_new_children):
+        # sort the population based on fitness value
+        sorted_pop = (sorted(zip(x_old, f_old), key=lambda x: x[1]))
+        # get generation chromosomes from sorted list
+        x_sort = [x for x, _ in sorted_pop]
+        # drop the genes with smallest fitness to make room for children
+        x_survivours = [*x_sort[NUM_PARENTS*2:], *x_new_children]
 
         return x_survivours
 
@@ -110,8 +126,8 @@ class EA(object):
         # recombine the parents to create children
         x_children = self.recombination(x_parents)
         # mutate the resulting the resulting children
-        x_new_children = self.mutation(x_old)
+        x_new_children = self.mutation(x_children)
         # select the survivors and return them
-        x_survivours = self.survivor_selection(x_children, x_new_children)
-        
+        x_survivours = self.survivor_selection(x_old, f_old, x_new_children)
+
         return x_survivours

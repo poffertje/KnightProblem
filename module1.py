@@ -1,37 +1,45 @@
 from random import randint
 from itertools import product
-from module2 import *
+from module2 import EA
 
 GENE_SIZE = 195
+GENE_PIECE_POS = 6  # length of the initial position in bits
+NUM_BITS = 3  # number of bits to encode moves
 
-num_gen = 400
-pop_size = 1000
+
+num_gen = 500
+pop_size = 175
 cross_prob = 0.8
-mut_prob = 0.8
+mut_prob = 0.6
+# use True if you want to see the best move sequence in the output
+verbose = True
 
 
 # This is the main loop of the evolutionary algorithm
-def main(pop_size, gen_num, cross_prob, mut_prob):
+def main(pop_size, num_gen, cross_prob, mut_prob):
     # initialize the population
     x_gen = generatePopulation(pop_size)  # create generation 0
-    f_gen = evaluate(x_gen)  # get the fitness value of generation 0
+    f_gen, _ = evaluate(x_gen)  # get the fitness value of generation 0
 
+    # create an object for the evolutionary algorithm
     ea = EA(pop_size, cross_prob, mut_prob)
 
     for i in range(num_gen):
-        # yield the concatenated results string
-        yield print('generation: {}, best value: {:}'.format(i, max(f_gen)))
-
         # take a step with the genetic algorithm
         x_gen = ea.step(x_gen, f_gen)
-        # evaluae the new generation
-        f_gen = evaluate(x_gen)
+        # evaluate the new generation
+        f_gen, solutions = evaluate(x_gen)
+        # get the index of the best value
+        best_idx = f_gen.index(max(f_gen))
+        # yield the concatenated results string
+        yield (i, max(f_gen), solutions[best_idx])
 
 
 # This function creates the initial population
-# Takes population size as input and return an initial population
+# takes population size as input and return an initial population
 def generatePopulation(pop_size):
     # type: (int) -> list[str]
+
     generation = []  # initialize return variable
     for i in range(pop_size):
         # create a single gene
@@ -39,25 +47,33 @@ def generatePopulation(pop_size):
         for i in range(GENE_SIZE):
             # update single gene
             gene = gene + str(randint(0, 1))
+
         # check for errors before adding the gene to the gene pool
-        assert len(gene) == GENE_SIZE
+        try:
+            assert len(gene) == GENE_SIZE
+        except:
+            raise Exception('Gene length must be {}, \
+                            got {} instead'.format(GENE_SIZE, len(gene)))
+
         generation.append(gene)
 
     return generation
 
 
-# Takes a generation as input and returns a list of the fitnesses of the 
+# Takes a generation as input and returns a list of the fitnesses of the
 # individuals of that population
 def evaluate(x_gen):
-    # type: (list[str]) -> list[int]
+    # type: (list[str]) -> list[int] and list[int]
 
-    f_gen = []
+    f_gen = []  # list of fitness values
+    solutions = []  # list of solutions
 
     for gene in x_gen:
         board = Board()
         f_gen.append(board.evaluateGene(gene))
+        solutions.append(board.visited_cells)
 
-    return f_gen
+    return f_gen, solutions
 
 
 class Board:
@@ -111,13 +127,21 @@ class Board:
         # type: (str) -> list[str]
 
         splitted_gene = []  # initialize return value
-        splitted_gene.append(gene[0:6])  # append the starting position
+        # append the starting position
+        splitted_gene.append(gene[0:GENE_PIECE_POS])
 
         # slice the gene without starting position
-        gene_without_start = gene[6:-1]
+        gene_without_start = gene[GENE_PIECE_POS:len(gene)]
 
-        moves = [gene_without_start[i:i + 3]
-                 for i in range(0, len(gene_without_start), 3)]
+        # check for errors before splitting the gene
+        try:
+            assert len(gene_without_start) % NUM_BITS == 0
+        except:
+            raise Exception('Gene length must be a multiple of {}, \
+                            got {} instead'.format(NUM_BITS, len(gene_without_start)))
+
+        moves = [gene_without_start[i:i + NUM_BITS]
+                 for i in range(0, len(gene_without_start), NUM_BITS)]
 
         splitted_gene.extend(moves)
 
@@ -157,8 +181,12 @@ class Board:
     def evaluateGene(self, gene):
         # type: (str) -> int
 
-        # check for errors before adding the gene to the gene pool
-        assert len(gene) == GENE_SIZE
+        # check for errors before calculating fitness
+        try:
+            assert len(gene) == GENE_SIZE
+        except:
+            raise Exception('Gene length must be {}, \
+                            got {} instead'.format(GENE_SIZE, len(gene)))
 
         fitness_value = 0
 
@@ -171,10 +199,15 @@ class Board:
         for move in splitted_gene[1:-1]:
             valid_moves = self.getKnightMoves(self.current_pos)
             location = self.updatePosition(self.current_pos, move)
-
+            # check whether move is a valid one
+            # and add one to the fitness value if yes
             if location in valid_moves and location not in self.visited_cells:
                 fitness_value += 1
+            # if the knight makes an illegal move, stop traversal
+            else:
+                return fitness_value
 
+            # update the state of the board
             self.current_pos = location
             self.visited_cells.append(location)
 
@@ -182,5 +215,12 @@ class Board:
 
 
 result = main(pop_size, num_gen, cross_prob, mut_prob)
-print(result)
+for i, f, s in result:
 
+    if verbose:
+        print("Generation number: {}, best value: {}\nBest solution: {}"
+              .format(i, f, s))
+
+    else:
+        print("Generation number: {}, best value: {}"
+              .format(i, f))
