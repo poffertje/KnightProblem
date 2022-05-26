@@ -22,7 +22,7 @@ class EA(object):
         for i in range(NUM_PARENTS):
             # create a random point P between 0 and f_sum
             point_P = randint(0, f_sum)
-             # keep adding fitness values to point_P until point_P exceeds f_sum
+            # keep adding fitness values to point_P until point_P exceeds f_sum
             for count, (f_gene, x_gene) in enumerate(zip(f_old, x_old)):
                 point_P += f_gene
                 # make an individual that exceeds f_sum new parent
@@ -31,7 +31,7 @@ class EA(object):
                     break  # start the next spin
 
                 # if we have not exceeded the sum, then pick the last element
-                elif point_P < f_sum and count == (GENE_SIZE - 1):
+                elif point_P < f_sum and count == (self.pop_size - 1):
                     x_parents.append(x_gene)
                     break  # start the next spin
 

@@ -9,8 +9,8 @@ NUM_BITS = 3  # number of bits to encode moves
 
 num_gen = 500
 pop_size = 175
-cross_prob = 0.8
-mut_prob = 0.6
+cross_prob = 0.9
+mut_prob = 0.3
 # use True if you want to see the best move sequence in the output
 verbose = True
 
@@ -196,7 +196,7 @@ class Board:
         self.visited_cells.append(self.current_pos)
 
         # iterate through the moves and update fitness value
-        for move in splitted_gene[1:-1]:
+        for move in splitted_gene[1:len(splitted_gene)]:
             valid_moves = self.getKnightMoves(self.current_pos)
             location = self.updatePosition(self.current_pos, move)
             # check whether move is a valid one
