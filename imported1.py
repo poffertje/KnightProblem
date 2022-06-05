@@ -39,12 +39,12 @@ def calculateFitness(parents):
     return fitnessValues
 
 # the main loop
-def step(parents, fitnessValues):
-    newParents = M2.parentSelection(parents, fitnessValues, popSize)
+def step(parents, fitnessValues, mut_prob, cross_prob):
+    newParents, f_newParents = M2.pselection(parents, fitnessValues, popSize, 2)
     children = M2.crossover(newParents)
-    children = M2.mutation(children)
+    children = M2.mutation(children, mut_prob)
     newFitnessValues = calculateFitness(children)
-    newChildren, fitnesses = M2.survivorSelection(parents, children, fitnessValues, newFitnessValues, popSize)
+    newChildren, fitnesses = M2.survivor_selection(parents, children, fitnessValues, newFitnessValues)
 
     return newChildren, fitnesses
 
@@ -55,7 +55,9 @@ knight = [x, y]
 
 # initialising hyper-parameters
 popSize = 100
-genSize = 100
+genSize = 1000
+mut_prob = 0.3
+cross_prob = 0.9
 
 # assigning binary values to move numbers
 binaryValues = {
@@ -91,12 +93,12 @@ for i in movesInit:
     tempString = ""
     for j in i:
         tempString += binaryValues[j]
-    
+
     parents.append(tempString)
 
 fitnessValues = calculateFitness(parents)
 
-# print(parents)
+# print(len(parents[0]))
 # print(knightMovement(parents))
 # print(fitnessValues)
 
@@ -107,7 +109,7 @@ bestFitness = [max(fitnessValues)]
 for i in range(genSize):
   if i % int(genSize * 0.1) == 0:
     print('Generation: {}, best fitness: {:.2f}'.format(i, max(fitnessValues)))
-  parents, fitnessValues = step(parents, fitnessValues)
+  parents, fitnessValues = step(parents, fitnessValues, mut_prob, cross_prob)
   populations.append(parents)
   if max(fitnessValues) > bestFitness[-1]:
     bestFitness.append(max(fitnessValues))

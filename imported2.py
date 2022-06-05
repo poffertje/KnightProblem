@@ -14,7 +14,7 @@ def pselection(x_old, f_old, k, p):
     x_parents = np.asarray([x_old[0]])
     f_parents = np.asarray([f_old[0]])
     for r in range(k-1):
-        pick_index = np.random.randint(1, x_old.shape[0], p)
+        pick_index = np.random.randint(1, len(x_old), p)
         best_index = pick_index[0]
         best_value = f_old[pick_index[0]]
         for i in pick_index[1:]:
@@ -76,7 +76,7 @@ def crossover(parents):
 
 
 def survivor_selection(x_old, x_children, f_old, f_children):
-    sr = int(x_old.size * np.random.uniform(0.5, 1))
+    sr = int(len(x_old) * np.random.uniform(0.5, 1))
     x_o = x_old[:sr]
     f_o = f_old[:sr]
     x_cat = np.concatenate([x_children, x_o], 0)
